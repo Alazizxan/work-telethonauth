@@ -11,7 +11,7 @@ async def init_db():
 
 async def get_active_bots():
     query = """
-    SELECT id, token
+    SELECT id, token, "ownerId"
     FROM "Bot"
     WHERE "isActive" = true
     """

@@ -10,27 +10,22 @@ from .text_service import load_texts
 bots = {}
 
 
-async def start_bot(bot_id, token, redis_url):
+async def start_bot(bot_id, token, owner_id, redis_url):
     if bot_id in bots:
         return bots[bot_id]
 
     redis = Redis.from_url(redis_url)
     storage = RedisStorage(redis)
 
-    bot = Bot(
-        token=token,
-        default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
-    )
+    bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN))
     dp = Dispatcher(storage=storage)
 
     texts = await load_texts(bot_id)
-    router = create_router(texts, bot_id)
+    router = create_router(texts, bot_id, owner_id)
+
 
     dp.include_router(router)
 
-    bots[bot_id] = {
-        "bot": bot,
-        "dp": dp
-    }
+    bots[bot_id] = {"bot": bot, "dp": dp}
 
     return bots[bot_id]

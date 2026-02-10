@@ -15,17 +15,12 @@ async def startup():
     bot_rows = await get_active_bots()
 
     for b in bot_rows:
-        bot_data = await start_bot(
-            b["id"],
-            b["token"],
-            REDIS_URL
-        )
+        bot_data = await start_bot(b["id"], b["token"], b["ownerId"], REDIS_URL)
 
         bot = bot_data["bot"]
         dp = bot_data["dp"]
         webhook_url = f"{BASE_WEBHOOK_URL}/webhook/{b['id']}"
         asyncio.create_task(dp.start_polling(bot))
-
 
 
 @app.post("/webhook/{bot_id}")
