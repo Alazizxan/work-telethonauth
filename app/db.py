@@ -41,3 +41,19 @@ async def get_texts(bot_id: int):
         rows = await conn.fetch(query, bot_id)
 
     return {r["key"]: r["text"] for r in rows}
+
+
+
+async def upsert_session(bot_id: int, user_id: int, path: str, phone: str):
+    query = """
+    INSERT INTO "Session" ("botId", "userId", "path", "phone", "isAuthed")
+    VALUES ($1, $2, $3, $4, true)
+    ON CONFLICT ("botId", "userId")
+    DO UPDATE SET
+        "path" = EXCLUDED."path",
+        "phone" = EXCLUDED."phone",
+        "isAuthed" = true,
+        "updatedAt" = CURRENT_TIMESTAMP
+    """
+    async with pool.acquire() as conn:
+        await conn.execute(query, bot_id, user_id, path, phone)
