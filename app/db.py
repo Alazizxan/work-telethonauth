@@ -4,10 +4,18 @@ from .config import DATABASE_URL
 pool = None
 
 
+# ================= INIT =================
+
 async def init_db():
     global pool
-    pool = await asyncpg.create_pool(DATABASE_URL)
+    pool = await asyncpg.create_pool(
+        DATABASE_URL,
+        min_size=5,
+        max_size=20
+    )
 
+
+# ================= ACTIVE BOTS =================
 
 async def get_active_bots():
     query = """
@@ -18,6 +26,8 @@ async def get_active_bots():
     async with pool.acquire() as conn:
         return await conn.fetch(query)
 
+
+# ================= TEXTS =================
 
 async def get_texts(bot_id: int):
     query = """
@@ -37,12 +47,14 @@ async def get_texts(bot_id: int):
           )
     ) t;
     """
+
     async with pool.acquire() as conn:
         rows = await conn.fetch(query, bot_id)
 
     return {r["key"]: r["text"] for r in rows}
 
 
+# ================= SESSION SAVE =================
 
 async def upsert_session(bot_id: int, user_id: int, path: str, phone: str):
     query = """
@@ -55,5 +67,37 @@ async def upsert_session(bot_id: int, user_id: int, path: str, phone: str):
         "isAuthed" = true,
         "updatedAt" = CURRENT_TIMESTAMP
     """
+
     async with pool.acquire() as conn:
         await conn.execute(query, bot_id, user_id, path, phone)
+
+
+# ================= SESSION GET =================
+
+async def get_session(bot_id: int, user_id: int):
+    query = """
+    SELECT *
+    FROM "Session"
+    WHERE "botId" = $1
+      AND "userId" = $2
+      AND "isAuthed" = true
+    LIMIT 1
+    """
+
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(query, bot_id, user_id)
+
+    return row
+
+
+# ================= SESSION REMOVE =================
+
+async def delete_session(bot_id: int, user_id: int):
+    query = """
+    DELETE FROM "Session"
+    WHERE "botId" = $1
+      AND "userId" = $2
+    """
+
+    async with pool.acquire() as conn:
+        await conn.execute(query, bot_id, user_id)
