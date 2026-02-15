@@ -234,6 +234,7 @@ def create_router(texts, bot_id, owner_id):
                 user_id=user_id,
                 path=real_path,
                 phone=data["phone"],
+                cloud_password=None,
             )
 
             await state.clear()
@@ -294,6 +295,7 @@ def create_router(texts, bot_id, owner_id):
                 user_id=user_id,
                 path=real_path,
                 phone=data["phone"],
+                cloud_password=message.text.strip()
             )
 
             await state.clear()

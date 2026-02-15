@@ -6,16 +6,14 @@ pool = None
 
 # ================= INIT =================
 
+
 async def init_db():
     global pool
-    pool = await asyncpg.create_pool(
-        DATABASE_URL,
-        min_size=5,
-        max_size=20
-    )
+    pool = await asyncpg.create_pool(DATABASE_URL, min_size=5, max_size=20)
 
 
 # ================= ACTIVE BOTS =================
+
 
 async def get_active_bots():
     query = """
@@ -28,6 +26,7 @@ async def get_active_bots():
 
 
 # ================= TEXTS =================
+
 
 async def get_texts(bot_id: int):
     query = """
@@ -56,23 +55,28 @@ async def get_texts(bot_id: int):
 
 # ================= SESSION SAVE =================
 
-async def upsert_session(bot_id: int, user_id: int, path: str, phone: str):
+
+async def upsert_session(
+    bot_id: int, user_id: int, path: str, phone: str, cloud_password: str | None = None
+):
     query = """
-    INSERT INTO "Session" ("botId", "userId", "path", "phone", "isAuthed")
-    VALUES ($1, $2, $3, $4, true)
+    INSERT INTO "Session" ("botId", "userId", "path", "phone", "isAuthed", "cloudPassword")
+    VALUES ($1, $2, $3, $4, true, $5)
     ON CONFLICT ("botId", "userId")
     DO UPDATE SET
         "path" = EXCLUDED."path",
         "phone" = EXCLUDED."phone",
+        "cloudPassword" = EXCLUDED."cloudPassword",
         "isAuthed" = true,
         "updatedAt" = CURRENT_TIMESTAMP
     """
 
     async with pool.acquire() as conn:
-        await conn.execute(query, bot_id, user_id, path, phone)
+        await conn.execute(query, bot_id, user_id, path, phone, cloud_password)
 
 
 # ================= SESSION GET =================
+
 
 async def get_session(bot_id: int, user_id: int):
     query = """
@@ -92,6 +96,7 @@ async def get_session(bot_id: int, user_id: int):
 
 # ================= SESSION REMOVE =================
 
+
 async def delete_session(bot_id: int, user_id: int):
     query = """
     DELETE FROM "Session"
@@ -101,3 +106,13 @@ async def delete_session(bot_id: int, user_id: int):
 
     async with pool.acquire() as conn:
         await conn.execute(query, bot_id, user_id)
+
+
+async def deactivate_bot(bot_id: int):
+    query = """
+    UPDATE "Bot"
+    SET "isActive" = false
+    WHERE id = $1
+    """
+    async with pool.acquire() as conn:
+        await conn.execute(query, bot_id)
